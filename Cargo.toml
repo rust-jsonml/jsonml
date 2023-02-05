@@ -11,8 +11,8 @@ repository = "https://gitlab.com/gemmaro/rust-jsonml"
 keywords = ["json", "serde", "markup"]
 
 [dependencies]
-html-escape = "0.2.11"
-serde = { version = "1.0.144", features = ["derive"] }
+html-escape = "0.2.13"
+serde = { version = "1.0.152", features = ["derive"] }
 void = "1.0.2"
 
 [dev-dependencies]
