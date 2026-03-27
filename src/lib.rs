@@ -27,47 +27,6 @@ pub enum Element {
     String(String),
 }
 
-impl Element {
-    #[deprecated(since = "0.4.0")]
-    pub fn map_bottom_up(self, function: fn(Self) -> Self) -> Self {
-        match self {
-            Element::Tag(Tag {
-                name,
-                attributes,
-                element_list,
-            }) => function(Element::Tag(Tag {
-                name,
-                attributes,
-                element_list: element_list
-                    .into_iter()
-                    .map(|element| element.map_bottom_up(function))
-                    .collect(),
-            })),
-            Element::String(_) => self,
-        }
-    }
-
-    #[deprecated(since = "0.4.0")]
-    pub fn map_top_down(self, function: fn(Self) -> Self) -> Self {
-        let element = function(self);
-        match element {
-            Element::Tag(Tag {
-                name,
-                attributes,
-                element_list,
-            }) => Element::Tag(Tag {
-                name,
-                attributes,
-                element_list: element_list
-                    .into_iter()
-                    .map(|element| element.map_top_down(function))
-                    .collect(),
-            }),
-            Element::String(_) => element,
-        }
-    }
-}
-
 /// WARNING: The fields will be hidden in the future for validation.
 #[derive(Debug, PartialEq, Clone)]
 pub struct Tag {
