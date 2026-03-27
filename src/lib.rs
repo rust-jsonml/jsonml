@@ -1,5 +1,6 @@
 #![doc = include_str!("../README.md")]
 
+use core::convert::From;
 use std::{
     collections::HashMap,
     error::Error,
@@ -433,6 +434,33 @@ impl<'a> IntoIterator for &'a PostOrderElement {
             result: vec![],
         }
     }
+}
+
+#[test]
+fn test_iters() {
+    let text = Element::String("hello".to_string());
+    let span = Element::Tag {
+        name: "span".to_string(),
+        attributes: HashMap::new(),
+        element_list: vec![],
+    };
+    let tree = Element::Tag {
+        name: "div".to_string(),
+        attributes: HashMap::new(),
+        element_list: vec![text.clone(), span.clone()],
+    };
+
+    let nodes: Vec<_> = PreOrderElement::from(tree.clone())
+        .into_iter()
+        .map(|node| node.to_owned())
+        .collect();
+    assert_eq!(nodes, vec![tree.clone(), text.clone(), span.clone()]);
+
+    let nodes: Vec<_> = PostOrderElement::from(tree.clone())
+        .into_iter()
+        .map(|node| node.to_owned())
+        .collect();
+    assert_eq!(nodes, vec![text, span, tree]);
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone, Default)]
