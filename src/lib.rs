@@ -387,6 +387,42 @@ impl<'a> IntoIterator for &'a PreOrderElement {
     }
 }
 
+pub struct ElementPostIter<'a> {
+    stack: Vec<&'a Element>,
+    result: Vec<&'a Element>,
+}
+
+impl<'a> Iterator for ElementPostIter<'a> {
+    type Item = &'a Element;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        while let Some(node) = self.stack.pop() {
+            self.result.push(node);
+            if let Element::Tag { element_list, .. } = node {
+                for child in element_list.iter() {
+                    self.stack.push(child);
+                }
+            }
+        }
+        self.result.pop()
+    }
+}
+
+pub struct PostOrderElement(Element);
+
+impl<'a> IntoIterator for &'a PostOrderElement {
+    type Item = &'a Element;
+    type IntoIter = ElementPostIter<'a>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        let PostOrderElement(element) = self;
+        ElementPostIter {
+            stack: vec![element],
+            result: vec![],
+        }
+    }
+}
+
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone, Default)]
 #[serde(untagged)]
 pub enum AttributeValue {
