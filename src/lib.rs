@@ -375,6 +375,12 @@ impl<'a> Iterator for ElementPreIter<'a> {
 
 pub struct PreOrderElement(Element);
 
+impl From<Element> for PreOrderElement {
+    fn from(value: Element) -> PreOrderElement {
+        PreOrderElement(value)
+    }
+}
+
 impl<'a> IntoIterator for &'a PreOrderElement {
     type Item = &'a Element;
     type IntoIter = ElementPreIter<'a>;
@@ -409,6 +415,12 @@ impl<'a> Iterator for ElementPostIter<'a> {
 }
 
 pub struct PostOrderElement(Element);
+
+impl From<Element> for PostOrderElement {
+    fn from(value: Element) -> PostOrderElement {
+        PostOrderElement(value)
+    }
+}
 
 impl<'a> IntoIterator for &'a PostOrderElement {
     type Item = &'a Element;

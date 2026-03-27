@@ -7,6 +7,7 @@
 * Remove `Tag` struct.
 * Delete deprecated methods.
 * Update Rust edition.
+* Add pre/post order iterators.
 
 ## [0.4.2] - 2023-02-05
 
