@@ -5,6 +5,8 @@
 ## 0.5.0 - 2026-03-27
 
 * Remove `Tag` struct.
+* Delete deprecated methods.
+* Update Rust edition.
 
 ## [0.4.2] - 2023-02-05
 
