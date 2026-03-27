@@ -162,7 +162,7 @@ impl Display for Element {
                                     && c != '\u{003E}'
                                     && c != '\u{002F}'
                                     && c != '\u{003D}'
-                                    && !('\u{FDD0}' <= c && c <= '\u{FDEF}')
+                                    && !('\u{FDD0}'..='\u{FDEF}').contains(&c)
                                     && c != '\u{FFFE}'
                                     && c != '\u{FFFF}'
                                     && c != '\u{1FFFE}'
@@ -371,8 +371,8 @@ impl Display for AttributeValue {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             AttributeValue::String(s) => write!(f, "{}", encode_unquoted_attribute(s)),
-            AttributeValue::Number(n) => write!(f, "{}", n.to_string()),
-            AttributeValue::Bool(b) => write!(f, "{}", b.to_string()),
+            AttributeValue::Number(n) => write!(f, "{}", n),
+            AttributeValue::Bool(b) => write!(f, "{}", b),
             AttributeValue::Null => write!(f, "null"),
         }
     }
@@ -385,7 +385,6 @@ fn test_attribute_value_string() {
 }
 
 #[test]
-#[allow(clippy::approx_constant)]
 fn test_attribute_value_number() {
     let value = AttributeValue::Number(3.14);
     assert_tokens(&value, &[Token::F32(3.14)]);
