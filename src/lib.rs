@@ -8,9 +8,9 @@ use std::{
 };
 
 use serde::{
+    Deserialize, Deserializer, Serialize, Serializer,
     de::{self, SeqAccess, Visitor},
     ser::SerializeSeq,
-    Deserialize, Deserializer, Serialize, Serializer,
 };
 
 use void::Void;
@@ -18,21 +18,17 @@ use void::Void;
 use html_escape::encode_unquoted_attribute;
 
 #[cfg(test)]
-use serde_test::{assert_de_tokens, assert_tokens, Token};
+use serde_test::{Token, assert_de_tokens, assert_tokens};
 
 // `Eq` and `Hash` cannot be derived since neither can `AttributeValue`.
 #[derive(Debug, PartialEq, Clone)]
 pub enum Element {
-    Tag(Tag),
+    Tag {
+        name: String,
+        attributes: HashMap<String, AttributeValue>,
+        element_list: Vec<Element>,
+    },
     String(String),
-}
-
-/// WARNING: The fields will be hidden in the future for validation.
-#[derive(Debug, PartialEq, Clone)]
-pub struct Tag {
-    pub name: String,
-    pub attributes: HashMap<String, AttributeValue>,
-    pub element_list: Vec<Element>,
 }
 
 impl Default for Element {
@@ -47,11 +43,11 @@ impl Serialize for Element {
         S: Serializer,
     {
         match self {
-            Element::Tag(Tag {
+            Element::Tag {
                 name,
                 attributes,
                 element_list,
-            }) => {
+            } => {
                 let mut seq =
                     serializer.serialize_seq(Some(1 + attributes.len() + element_list.len()))?;
                 seq.serialize_element(&name)?;
@@ -110,11 +106,11 @@ impl<'de> Visitor<'de> for ElementVisitor {
             while let Some(element) = seq.next_element::<Element>()? {
                 element_list.push(element);
             }
-            Ok(Element::Tag(Tag {
+            Ok(Element::Tag {
                 name,
                 attributes,
                 element_list,
-            }))
+            })
         } else {
             Err(de::Error::missing_field("name"))
         }
@@ -141,11 +137,11 @@ impl Display for Element {
             f,
             "{}",
             match self {
-                Element::Tag(Tag {
+                Element::Tag {
                     name,
                     attributes,
                     element_list,
-                }) => {
+                } => {
                     // HTML tag name must consists of ASCII alphanumerics.
                     // https://html.spec.whatwg.org/multipage/syntax.html#syntax-tag-name
                     if !name.chars().all(|c| c.is_ascii_alphanumeric()) {
@@ -225,7 +221,7 @@ impl Display for Element {
 #[test]
 fn test_display_element() {
     assert_eq!(
-        Element::Tag(Tag {
+        Element::Tag {
             name: "div".to_string(),
             attributes: HashMap::from([(
                 "id".to_string(),
@@ -233,13 +229,13 @@ fn test_display_element() {
             ),]),
             element_list: vec![
                 Element::String("bbb".to_string()),
-                Element::Tag(Tag {
+                Element::Tag {
                     name: "span".to_string(),
                     attributes: HashMap::default(),
                     element_list: vec![Element::String("ccc".to_string())]
-                })
+                }
             ]
-        })
+        }
         .to_string(),
         r#"<div id="aaa">bbb<span>ccc</span></div>"#.to_string()
     );
@@ -248,35 +244,35 @@ fn test_display_element() {
 #[test]
 #[should_panic]
 fn test_display_element_invalid_tag_name() {
-    Element::Tag(Tag {
+    Element::Tag {
         name: "あ".to_string(),
         attributes: HashMap::default(),
         element_list: vec![],
-    })
+    }
     .to_string();
 }
 
 #[test]
 #[should_panic]
 fn test_display_element_invalid_attribute_name() {
-    Element::Tag(Tag {
+    Element::Tag {
         name: "a".to_string(),
         attributes: HashMap::from([(" ".to_string(), AttributeValue::Null)]),
         element_list: vec![],
-    })
+    }
     .to_string();
 }
 
 #[test]
 fn test_display_element_encode_attribute_value() {
     assert_eq!(
-        Element::Tag(Tag {
+        Element::Tag {
             name: "a".to_string(),
             attributes: HashMap::from(
                 [("b".to_string(), AttributeValue::String("=".to_string())),]
             ),
             element_list: vec![]
-        })
+        }
         .to_string(),
         r#"<a b="&#x3D;"></a>"#.to_string()
     );
@@ -293,14 +289,14 @@ impl<'de> Deserialize<'de> for Element {
 
 #[test]
 fn test_element_tag() {
-    let element = Element::Tag(Tag {
+    let element = Element::Tag {
         name: "li".to_string(),
         attributes: HashMap::from([(
             "style".to_string(),
             AttributeValue::String("color:red".to_string()),
         )]),
         element_list: vec![Element::String("First Item".to_string())],
-    });
+    };
     assert_tokens(
         &element,
         &[
@@ -318,11 +314,11 @@ fn test_element_tag() {
 
 #[test]
 fn test_element_tag_name_only() {
-    let element = Element::Tag(Tag {
+    let element = Element::Tag {
         name: "li".to_string(),
         attributes: HashMap::default(),
         element_list: vec![],
-    });
+    };
     assert_tokens(
         &element,
         &[Token::Seq { len: Some(1) }, Token::Str("li"), Token::SeqEnd],
@@ -331,14 +327,14 @@ fn test_element_tag_name_only() {
 
 #[test]
 fn test_element_tag_without_element_list() {
-    let element = Element::Tag(Tag {
+    let element = Element::Tag {
         name: "li".to_string(),
         attributes: HashMap::from([(
             "style".to_string(),
             AttributeValue::String("color:red".to_string()),
         )]),
         element_list: vec![],
-    });
+    };
     assert_tokens(
         &element,
         &[

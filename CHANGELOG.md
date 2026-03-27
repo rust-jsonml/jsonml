@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+## 0.5.0 - 2026-03-27
+
+* Remove `Tag` struct.
+
 ## [0.4.2] - 2023-02-05
 
 ### Changed

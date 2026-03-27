@@ -6,21 +6,21 @@ Deserialization example:
 
 ```rust
 # use std::collections::HashMap;
-use jsonml::{Element, AttributeValue, Tag};
+use jsonml::{Element, AttributeValue};
 
 let element: Element =
     serde_json::from_str(r#"[ "li", { "style": "color:red" }, "First Item" ]"#)
         .expect("deserialize element tag");
 assert_eq!(
     element,
-    Element::Tag(Tag {
+    Element::Tag {
         name: "li".to_string(),
         attributes: HashMap::from([(
             "style".to_string(),
             AttributeValue::String("color:red".to_string())
         )]),
         element_list: vec![Element::String("First Item".to_string())]
-    })
+    }
 );
 ```
 
@@ -28,16 +28,16 @@ Serialization example:
 
 ```rust
 # use std::collections::HashMap;
-use jsonml::{Element, AttributeValue, Tag};
+use jsonml::{Element, AttributeValue};
 
-let element = Element::Tag(Tag {
+let element = Element::Tag {
     name: "li".to_string(),
     attributes: HashMap::from([(
         "style".to_string(),
         AttributeValue::String("color:red".to_string()))]
     ),
     element_list: vec![Element::String("First Item".to_string())]
-});
+};
 assert_eq!(
     serde_json::to_string(&element).expect("serialize element tag"),
     r#"["li",{"style":"color:red"},"First Item"]"#
