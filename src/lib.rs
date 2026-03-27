@@ -355,6 +355,38 @@ fn test_element_string() {
     assert_de_tokens(&element, &[Token::Str("First Item")]);
 }
 
+pub struct ElementPreIter<'a> {
+    stack: Vec<&'a Element>,
+}
+
+impl<'a> Iterator for ElementPreIter<'a> {
+    type Item = &'a Element;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let node = self.stack.pop()?;
+        if let Element::Tag { element_list, .. } = node {
+            for child in element_list.iter().rev() {
+                self.stack.push(child);
+            }
+        }
+        Some(node)
+    }
+}
+
+pub struct PreOrderElement(Element);
+
+impl<'a> IntoIterator for &'a PreOrderElement {
+    type Item = &'a Element;
+    type IntoIter = ElementPreIter<'a>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        let PreOrderElement(element) = self;
+        ElementPreIter {
+            stack: vec![element],
+        }
+    }
+}
+
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone, Default)]
 #[serde(untagged)]
 pub enum AttributeValue {
