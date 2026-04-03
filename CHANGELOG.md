@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+* Move project repository to GitHub.
+
 ## 0.5.0 - 2026-03-27
 
 * Remove `Tag` struct.

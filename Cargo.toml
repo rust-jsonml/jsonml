@@ -7,7 +7,7 @@ rust-version = "1.85"
 license = "MIT OR Apache-2.0"
 readme = "README.md"
 description = "JsonML deserialization and serialization"
-repository = "https://gitlab.com/gemmaro/rust-jsonml"
+repository = "https://github.com/rust-jsonml/jsonml"
 keywords = ["json", "serde", "markup"]
 
 [dependencies]

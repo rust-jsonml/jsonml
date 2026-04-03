@@ -1,6 +1,10 @@
 # JsonML crate
 
-[JsonML](http://www.jsonml.org/) deserialization and serialization
+[JsonML](http://www.jsonml.org/) deserialization and serialization.
+
+* [GitHub](https://github.com/rust-jsonml/jsonml)
+  (former repository was at [GitLab](https://gitlab.com/gemmaro/rust-jsonml))
+* [documentation](https://docs.rs/jsonml/latest/jsonml/)
 
 Deserialization example:
 
