@@ -2,6 +2,9 @@
 
 ## [Unreleased]
 
+## 0.5.1 - 2026-05-10
+
+* Enabled trusted publishing.
 * Move project repository to GitHub.
 
 ## 0.5.0 - 2026-03-27
