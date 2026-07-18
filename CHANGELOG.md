@@ -2,6 +2,14 @@
 
 ## [Unreleased]
 
+## 0.6.0 - 2026-07-18
+
+* Add `Array` and `Object` attribute values, completing JSON's value set.
+* Widen `Number` from `f32` to `f64` to match JSON's double precision.
+* Mark `Element` and `AttributeValue` as non-exhaustive.
+* Render structured attribute values as JSON in the HTML projection, with
+  object keys sorted so output does not vary with hash iteration order.
+
 ## 0.5.1 - 2026-05-10
 
 * Enabled trusted publishing.
