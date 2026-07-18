@@ -23,6 +23,7 @@ use serde_test::{Token, assert_de_tokens, assert_tokens};
 
 // `Eq` and `Hash` cannot be derived since neither can `AttributeValue`.
 #[derive(Debug, PartialEq, Clone)]
+#[non_exhaustive]
 pub enum Element {
     Tag {
         name: String,
@@ -465,13 +466,69 @@ fn test_iters() {
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone, Default)]
 #[serde(untagged)]
+#[non_exhaustive]
 pub enum AttributeValue {
     String(String),
-    Number(f32),
+    Number(f64),
     Bool(bool),
+    Array(Vec<AttributeValue>),
+    Object(HashMap<String, AttributeValue>),
 
     #[default]
     Null,
+}
+
+impl AttributeValue {
+    /// Renders the value as JSON. Object keys are emitted in sorted order so
+    /// that the output does not vary with hash iteration order.
+    fn write_json(&self, out: &mut String) {
+        match self {
+            AttributeValue::String(s) => write_json_string(s, out),
+            AttributeValue::Number(n) => out.push_str(&n.to_string()),
+            AttributeValue::Bool(b) => out.push_str(&b.to_string()),
+            AttributeValue::Array(items) => {
+                out.push('[');
+                for (index, item) in items.iter().enumerate() {
+                    if index > 0 {
+                        out.push(',');
+                    }
+                    item.write_json(out);
+                }
+                out.push(']');
+            }
+            AttributeValue::Object(members) => {
+                let mut keys: Vec<&String> = members.keys().collect();
+                keys.sort();
+                out.push('{');
+                for (index, key) in keys.into_iter().enumerate() {
+                    if index > 0 {
+                        out.push(',');
+                    }
+                    write_json_string(key, out);
+                    out.push(':');
+                    members[key].write_json(out);
+                }
+                out.push('}');
+            }
+            AttributeValue::Null => out.push_str("null"),
+        }
+    }
+}
+
+fn write_json_string(value: &str, out: &mut String) {
+    out.push('"');
+    for character in value.chars() {
+        match character {
+            '"' => out.push_str("\\\""),
+            '\\' => out.push_str("\\\\"),
+            '\n' => out.push_str("\\n"),
+            '\r' => out.push_str("\\r"),
+            '\t' => out.push_str("\\t"),
+            c if (c as u32) < 0x20 => out.push_str(&format!("\\u{:04x}", c as u32)),
+            c => out.push(c),
+        }
+    }
+    out.push('"');
 }
 
 /// Display in HTML
@@ -481,6 +538,11 @@ impl Display for AttributeValue {
             AttributeValue::String(s) => write!(f, "{}", encode_unquoted_attribute(s)),
             AttributeValue::Number(n) => write!(f, "{}", n),
             AttributeValue::Bool(b) => write!(f, "{}", b),
+            AttributeValue::Array(_) | AttributeValue::Object(_) => {
+                let mut json = String::new();
+                self.write_json(&mut json);
+                write!(f, "{}", encode_unquoted_attribute(&json))
+            }
             AttributeValue::Null => write!(f, "null"),
         }
     }
@@ -495,7 +557,107 @@ fn test_attribute_value_string() {
 #[test]
 fn test_attribute_value_number() {
     let value = AttributeValue::Number(3.14);
-    assert_tokens(&value, &[Token::F32(3.14)]);
+    assert_tokens(&value, &[Token::F64(3.14)]);
+}
+
+#[test]
+fn test_attribute_value_number_keeps_double_precision() {
+    let value: AttributeValue = serde_json::from_str("16777217").unwrap();
+    assert_eq!(value, AttributeValue::Number(16777217.0));
+    assert_eq!(serde_json::to_string(&value).unwrap(), "16777217.0");
+}
+
+#[test]
+fn test_attribute_value_array() {
+    let value: AttributeValue = serde_json::from_str(r#"["Length:1","Min:0"]"#).unwrap();
+    assert_eq!(
+        value,
+        AttributeValue::Array(vec![
+            AttributeValue::String("Length:1".to_string()),
+            AttributeValue::String("Min:0".to_string()),
+        ])
+    );
+    assert_eq!(
+        serde_json::to_string(&value).unwrap(),
+        r#"["Length:1","Min:0"]"#
+    );
+}
+
+#[test]
+fn test_attribute_value_object() {
+    let value: AttributeValue = serde_json::from_str(r#"{"fg":"Green","bold":true}"#).unwrap();
+    let AttributeValue::Object(ref members) = value else {
+        panic!("expected an object");
+    };
+    assert_eq!(
+        members.get("fg"),
+        Some(&AttributeValue::String("Green".to_string()))
+    );
+    assert_eq!(members.get("bold"), Some(&AttributeValue::Bool(true)));
+}
+
+#[test]
+fn test_attribute_value_nested_round_trip() {
+    let source = r#"{"a":[1.0,{"b":null}],"c":{"d":[true]}}"#;
+    let value: AttributeValue = serde_json::from_str(source).unwrap();
+    let round_tripped = serde_json::to_string(&value).unwrap();
+    let reparsed: AttributeValue = serde_json::from_str(&round_tripped).unwrap();
+    assert_eq!(value, reparsed);
+}
+
+#[test]
+fn test_element_with_structured_attribute_values() {
+    let source = r#"["Layout",{"constraints":["Length:1","Min:0"]},["Gauge",{"style":{"fg":"Green"}}]]"#;
+    let element: Element = serde_json::from_str(source).unwrap();
+    let Element::Tag {
+        ref name,
+        ref attributes,
+        ref element_list,
+    } = element
+    else {
+        panic!("expected a tag");
+    };
+    assert_eq!(name, "Layout");
+    assert_eq!(
+        attributes.get("constraints"),
+        Some(&AttributeValue::Array(vec![
+            AttributeValue::String("Length:1".to_string()),
+            AttributeValue::String("Min:0".to_string()),
+        ]))
+    );
+    assert_eq!(element_list.len(), 1);
+
+    let reparsed: Element = serde_json::from_str(&serde_json::to_string(&element).unwrap()).unwrap();
+    assert_eq!(element, reparsed);
+}
+
+#[test]
+fn test_display_structured_attribute_value_as_json() {
+    let value = AttributeValue::Array(vec![
+        AttributeValue::Number(1.0),
+        AttributeValue::String("two".to_string()),
+    ]);
+    let rendered = value.to_string();
+    assert_eq!(
+        html_escape::decode_html_entities(&rendered),
+        r#"[1,"two"]"#
+    );
+}
+
+#[test]
+fn test_display_object_attribute_value_sorts_keys() {
+    let value: AttributeValue = serde_json::from_str(r#"{"b":1,"a":2,"c":3}"#).unwrap();
+    assert_eq!(
+        html_escape::decode_html_entities(&value.to_string()),
+        r#"{"a":2,"b":1,"c":3}"#
+    );
+}
+
+#[test]
+fn test_display_object_attribute_value_is_order_independent() {
+    let one: AttributeValue = serde_json::from_str(r#"{"b":1,"a":2}"#).unwrap();
+    let other: AttributeValue = serde_json::from_str(r#"{"a":2,"b":1}"#).unwrap();
+    assert_eq!(one.to_string(), other.to_string());
 }
 
 #[test]
