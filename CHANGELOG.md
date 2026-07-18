@@ -2,6 +2,13 @@
 
 ## [Unreleased]
 
+## 0.7.0 - 2026-07-18
+
+* Revert the `Array` and `Object` attribute values added in 0.6.0. Attribute
+  values stay scalar, as in the original JsonML syntax; structured
+  configuration is represented as child elements.
+* Revert the non-exhaustive marking of `Element` and `AttributeValue`.
+
 ## 0.6.0 - 2026-07-18
 
 * Add `Array` and `Object` attribute values, completing JSON's value set.
